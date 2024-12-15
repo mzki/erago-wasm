@@ -17,7 +17,7 @@ WebAssembly.instantiateStreaming(fetch("erago.wasm"), go.importObject).then((res
 });
 
 async function runGoApp() {
-    console.clear();
+    //console.clear();
     await go.run(inst);
     inst = await WebAssembly.instantiate(mod, go.importObject); // reset instance
 }
@@ -30,6 +30,8 @@ self.addEventListener("message", (ev) => {
 }, false);
 
 /*
+    Events published from Engine.
+
 	EngineOnPublishJson EngineCallbackID = iota
 	EngineOnPublishJsonTemporary
 	EngineOnRemove
@@ -41,12 +43,30 @@ self.addEventListener("message", (ev) => {
 
 	EngineNotifyQuit
 */
-self.addEventListener("EngineOnPublishJson", (ev) => {
-    self.postMessage(["engineEvent", ["addParagrah", ev.detail[0]]]);
-})
+
+// entry: {eventName, messageType, [arg]}
+for (const entry of [
+    ["EngineOnPublishJson", "addParagraph"],
+    ["EngineOnPublishJsonTemporary", "addParagraph"],
+    ["EngineOnRemove", "removeParagraph"],
+    ["EngineOnRemoveAll", "removeParagraph", -1],
+	["EngineOnCommandRequested", "inputStatus"],
+	["EngineOnInputRequested", "inputStatus"],
+	["EngineOnInputRequestClosed", "inputStatus"],
+]) {
+    if (entry[2] === undefined) {
+        self.addEventListener(entry[0], (ev) => {
+            self.postMessage(["engineEvent", [entry[1], ev.detail[0]]])
+        })
+    } else {
+        self.addEventListener(entry[0], (ev) => {
+            self.postMessage(["engineEvent", [entry[1], entry[2]]])
+        })
+    }
+}
 
 self.addEventListener("EngineNotifyQuit", (ev) => {
     self.postMessage(["engineEvent", ["notifyQuit", ev.detail[0]]]);
 })
 
-self.postMessage(["engine_worker loaded!!!"])
+self.postMessage(["engine_worker loaded!"])

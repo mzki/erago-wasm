@@ -73,18 +73,23 @@ func sendEventToJs(cbID EngineCallbackID, args ...any) {
 	js.Global().Get("self").Call("dispatchEvent", ev)
 }
 
-func RunEngine(baseDir string, fsys model.FileSystemGlob) (done <-chan (struct{}), err error) {
+func RunEngine(baseDir string, fsys model.FileSystemGlob) (done <-chan (struct{}), quitFunc func(), err error) {
 	messenger := newUiMessenger()
 	if err := model.Init(messenger, baseDir, &model.InitOptions{
 		ImageFetchType: model.ImageFetchEncodedPNG,
 		FileSystem:     fsys,
 	}); err != nil {
-		return nil, fmt.Errorf("init Error: %w", err)
+		return nil, nil, fmt.Errorf("init Error: %w", err)
 	}
 
 	model.Main(messenger)
 
-	return messenger.done, nil
+	done = messenger.done
+	quitFunc = func() {
+		model.Quit()
+	}
+	err = nil
+	return
 }
 
 func RunIO() (cancelFunc func()) {
@@ -102,8 +107,9 @@ func RunIO() (cancelFunc func()) {
 				model.SendStopSkippingWait()
 				SendBackMethodOK(methodName)
 			case "send_quit":
-				model.Quit()
-				SendBackMethodOK(methodName)
+				// // quit is not exposed since it is handled by engine itself.
+				// model.Quit()
+				// SendBackMethodOK(methodName)
 			case "set_textunit_px":
 				wPx := data.Index(1).Float()
 				hPx := data.Index(2).Float()

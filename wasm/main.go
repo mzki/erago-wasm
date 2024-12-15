@@ -41,12 +41,14 @@ func main() {
 		SendBackStatusEngineStartNG(err)
 	}
 
-	done, err := RunEngine(rootPath, rootPathStore)
+	done, quitFunc, err := RunEngine(rootPath, rootPathStore)
 	if err != nil {
 		SendBackStatusEngineStartNG(err)
 		return
 	}
+	defer quitFunc()
 	SendBackStatusEngineStartOK()
+
 	cancelRunIO := RunIO()
 	defer cancelRunIO()
 
