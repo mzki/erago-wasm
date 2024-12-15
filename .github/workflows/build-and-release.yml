@@ -1,0 +1,199 @@
+# This is a build and release workflow.
+name: Build-and-Release
+
+# Controls when the workflow will run
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ "v*.*.*" ]
+  workflow_call: {}
+
+  # Allows you to run this workflow manually from the Actions tab
+  # workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+
+  testing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # for all history and tags
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Testing
+        run: go test -timeout 3m -v ./...
+
+      - name: Race Testing
+        run: go test -race -timeout 5m -v ./...
+
+  build-wasm:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [testing]
+    outputs:
+      version:          ${{ steps.get_version_info.outputs.version }}
+      version_for_file: ${{ steps.get_version_info.outputs.version_for_file }}
+      commit_hash:      ${{ steps.get_version_info.outputs.commit_hash }}
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # for all history and tags
+
+      - name: Get version information to be used later
+        id: get_version_info
+        run: |
+          version=$(git describe --tags --abbrev=0)
+          version_for_file=$( echo "${version}" | sed -e "s/\./_/g)")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "version_for_file=$version_for_file" >> "$GITHUB_OUTPUT"
+          echo "commit_hash=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"  
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: build wasm
+        env:
+          VERSION: ${{ steps.get_version_info.outputs.version }}
+          COMMIT_HASH: ${{ steps.get_version_info.outputs.commit_hash }}
+        run: |
+          bash scripts/build.sh -v "$VERSION" -c "$COMMIT_HASH"
+          bash scripts/copy-wasm-exec-js.sh
+
+      # Need to tar packing to maintain execute permissions.
+      # See https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
+      - name: Packing binary
+        run: |
+          chmod +x ./html/*
+          tar zcf ./static-html.tar.gz ./html/*
+
+      - name: Upload built binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-html
+          path: ./static-html.tar.gz
+          retention-days: 7 # for 1 week
+          if-no-files-found: error
+
+
+  # Build licenses of dependencies.
+  build-credits:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [testing]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1 # just need HEAD files.
+
+      # needs Go since use go generate internally. 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # needs Go since use go generate internally. 
+      - name: Set up go-licenses
+        run: go install github.com/google/go-licenses@v1.6.0
+          
+      - name: Generate credits
+        run: bash scripts/credits -o build
+
+      - name: Upload built credits
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-credits
+          path: ./build
+          retention-days: 7 # for 1 week
+          if-no-files-found: error
+
+  # archive artifacts
+  archive: 
+    runs-on: ubuntu-latest
+    needs: [build-wasm, build-credits]
+    timeout-minutes: 5
+    env: 
+      ARTIFACT_NAME: archive
+    outputs:
+      artifact-name: ${{ env.ARTIFACT_NAME }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare directory
+        run: mkdir -p build
+ 
+      - name: Download static-html
+        uses: actions/download-artifact@v4
+        with:
+          name: static-html
+          path: ./
+        
+      # unpack into ./build/ directory
+      - name: Unpack static-html
+        run: |
+          ls -l .
+          tar zxf static-html.tar.gz
+
+      - name: Download generated credits
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-credits
+          path: build
+
+      - name: Archive
+        env:
+            VERSION_FOR_FILE: ${{ needs.build-wasm.outputs.version_for_file }}
+        run: |
+          target_path="./build/archive"
+          bash scripts/archive.sh -o $target_path -v $VERSION_FOR_FILE build/CREDITS
+
+      - name: Upload archive 
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ./build/archive/*.zip
+          retention-days: 7 # for 1 week
+          if-no-files-found: error
+
+  # release archive if push tags
+  release: 
+    runs-on: ubuntu-latest
+    needs: [archive]
+    if: startsWith(github.ref, 'refs/tags/')
+    timeout-minutes: 5
+    steps:
+      - name: Download archive
+        uses: actions/download-artifact@v4
+        with:
+          name: archive
+          path: build/archive
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: build/archive/**/*
+          fail_on_unmatched_files: true

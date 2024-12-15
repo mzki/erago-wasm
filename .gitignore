@@ -3,3 +3,5 @@
 *.wasm.br
 wasm_exec.js
 *.pem
+
+build/*

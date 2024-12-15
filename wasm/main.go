@@ -10,12 +10,13 @@ import (
 )
 
 var (
-	APPNAME string
-	VERSION string
+	APPNAME     string
+	VERSION     string
+	COMMIT_HASH string
 )
 
 func main() {
-	fmt.Printf("---------- Start %s %s ----------\n", APPNAME, VERSION)
+	fmt.Printf("---------- Start %s-%s-%s ----------\n", APPNAME, VERSION, COMMIT_HASH)
 	SendBackStatusLaunchOK()
 
 	const rootDir = "/erago-wasm"
