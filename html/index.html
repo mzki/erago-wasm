@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="HandheldFriendly" content="True" />
+	<title>Folder upload testing</title>
+	<link rel="icon" href="favicon.ico" type="image/png">
+	<link rel="canonical" href="http://localhost">
+	<link rel="stylesheet" href="./style.css">
+
+</head>
+
+<body>
+	<header>
+		<h1>Folder upload testing</h1>
+		<nav>Folder upload testing</nav>
+	</header>
+
+    <button type="button" id="btn-filepicker" name="fileListBtn" onclick="onFileListBtnClick()" >Upload Direcotry!!!</button>
+
+    <div>
+        <p id="status-text"></p>
+    </div>
+    <ul id="listing"></ul>
+    
+    <footer>
+		<p>© mzki</p>
+	</footer>
+
+    <script>
+        //@ts-check
+        var engineWorker 
+        if (window.Worker) {
+            engineWorker = new Worker("worker/engine_worker.js");
+            setTimeout(() => engineWorker.postMessage(["run_engine_worker"]), 3*1000);
+        } else {
+            alert("This browser is not support for this sample.");
+        }
+
+        /**
+         * read file content with async manner.
+         * @param {Blob} file
+         * @returns {Promise<string | ArrayBuffer | null>}
+         */
+        async function readFileAsync(file) {
+            return new Promise((resolve, reject) => {
+                let reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(e.target.error);
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        async function asyncSelectDirectory(resolve, reject) {
+            let input = document.createElement("input");
+            input.type = "file";
+            input.multiple = false;
+            input.webkitdirectory = false;
+            input.addEventListener(
+                "change",
+                async (event) => {
+                    if (event.target === null) {
+                        input.remove(); // itself.
+                        reject(new Error("Empty files")); 
+                        return;
+                    }
+                    if (!window.isSecureContext) {
+                        input.remove(); // itself.
+                        reject(new Error("NOT secure context"));
+                        return;
+                    }
+                    const file = event.target.files[0];
+                    input.remove(); // itself.
+                    resolve(file);
+                },                
+                false,
+            );
+            // user cancel input dialog. https://memorandom.whitepenguins.com/posts/chrome-input-file-cancel/
+            input.addEventListener("cancel", (event) => { input.remove(); resolve(null); }, false); 
+            input.click();
+        }
+
+        async function onFileListBtnClick() {
+            let status = document.getElementById("status-text");
+            status.innerText = "loading";
+            let directory = await new Promise(asyncSelectDirectory);
+            if (directory === null) {
+                status.innerText = "canceled";
+            } else {
+                status.innerText = "load complete";
+            }
+            const bytes = await readFileAsync(directory);
+            engineWorker.postMessage(["install_package", new Uint8Array(bytes), "eragoPkg-tmp"]);
+        }
+
+        engineWorker.onmessage = (ev) => {
+            console.log("onmessage", ev.data, ev.timestamp)
+            if (ev.data[0] == "methodResult") {
+                const args = ev.data[1];
+                if (args[0] == "install_package") {
+                    const installedPath = args[1];
+                    engineWorker.postMessage(["start_engine_with_path", installedPath]);
+                }
+            }
+        }
+
+        engineWorker.onmessageerror = (ev) => {
+            console.log("onmessageerror", ev)
+        }
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,5 @@
+*.wasm
+*.wasm.gz
+*.wasm.br
+wasm_exec.js
+*.pem
