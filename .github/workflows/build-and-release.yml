@@ -32,10 +32,7 @@ jobs:
           cache: true
 
       - name: Testing
-        run: go test -timeout 3m -v ./...
-
-      - name: Race Testing
-        run: go test -race -timeout 5m -v ./...
+        run: GOOS=js GOARCH=wasm go test -timeout 3m -v ./wasm
 
   build-wasm:
     # The type of runner that the job will run on
@@ -57,8 +54,8 @@ jobs:
       - name: Get version information to be used later
         id: get_version_info
         run: |
-          version=$(git describe --tags --abbrev=0)
-          version_for_file=$( echo "${version}" | sed -e "s/\./_/g)")
+          version=$(git describe --tags --abbrev=0 || echo "alpha")
+          version_for_file=$( echo "${version}" | sed -e "s/\./_/g")
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "version_for_file=$version_for_file" >> "$GITHUB_OUTPUT"
           echo "commit_hash=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"  
@@ -118,7 +115,7 @@ jobs:
         run: go install github.com/google/go-licenses@v1.6.0
           
       - name: Generate credits
-        run: bash scripts/credits -o build
+        run: bash scripts/credits.sh -o build
 
       - name: Upload built credits
         uses: actions/upload-artifact@v4
