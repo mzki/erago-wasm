@@ -102,7 +102,7 @@
                 if (args[0] == "install_package") {
                     const installedPath = args[1];
                     engineWorker.postMessage(["start_engine_with_path", installedPath]);
-                    setTimeout(() => engineWorker.postMessage(["send_command", "9"]), 5 * 1000); // to quit automatically
+                    setTimeout(() => engineWorker.postMessage(["send_quit"]), 5 * 1000); // to quit automatically
                 }
             }
             if (ev.data[0] == "engineEvent") {

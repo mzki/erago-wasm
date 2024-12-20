@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall/js"
 
 	model "github.com/mzki/erago/mobile/model/v2"
@@ -100,12 +101,7 @@ func (fsys *WebFileSystem) Load(fpath string) (model.ReadCloser, error) {
 		return nil, &fs.PathError{Op: "open-read", Path: fpath, Err: err}
 	}
 	fileSize := syncReader.Call("getSize")
-	return &WebReader{
-		fileSize:  fileSize.Int(),
-		readCount: 0,
-		path:      fpath,
-		reader:    syncReader,
-	}, nil
+	return newWebReader(fileSize.Int(), fpath, syncReader), nil
 }
 
 func (fsys *WebFileSystem) Store(fpath string) (model.WriteCloser, error) {
@@ -113,11 +109,7 @@ func (fsys *WebFileSystem) Store(fpath string) (model.WriteCloser, error) {
 	if err != nil {
 		return nil, &fs.PathError{Op: "open-write", Path: fpath, Err: err}
 	}
-	return &WebWriter{
-		writeCount: 0,
-		path:       fpath,
-		writer:     syncWriter,
-	}, nil
+	return newWebWriter(fpath, syncWriter), nil
 }
 
 func (fsys *WebFileSystem) Exist(fpath string) bool {
@@ -269,13 +261,31 @@ func recursiveGetXXXHandleAsync(getHandleMethod string, root js.Value, relPath s
 // ========== Reader/Writer =============
 
 type WebReader struct {
+	mu        *sync.Mutex
+	closed    bool
 	fileSize  int
 	readCount int
 	path      string
 	reader    js.Value
 }
 
+func newWebReader(fileSize int, path string, reader js.Value) *WebReader {
+	return &WebReader{
+		mu:        new(sync.Mutex),
+		closed:    false,
+		fileSize:  fileSize,
+		readCount: 0,
+		path:      path,
+		reader:    reader,
+	}
+}
+
 func (r *WebReader) Read(bs []byte) (n int, err error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.closed {
+		return 0, &fs.PathError{Op: "read", Path: r.path, Err: io.ErrClosedPipe}
+	}
 	if nBuf := r.fileSize - r.readCount; nBuf <= 0 {
 		return 0, io.EOF
 	}
@@ -292,18 +302,41 @@ func (r *WebReader) Read(bs []byte) (n int, err error) {
 }
 
 func (r *WebReader) Close() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.closed {
+		return &fs.PathError{Op: "close", Path: r.path, Err: io.ErrClosedPipe}
+	}
+	r.closed = true
 	r.reader.Call("flush")
 	r.reader.Call("close")
 	return nil
 }
 
 type WebWriter struct {
+	mu         *sync.Mutex
+	closed     bool
 	writeCount int
 	path       string
 	writer     js.Value
 }
 
+func newWebWriter(path string, writer js.Value) *WebWriter {
+	return &WebWriter{
+		mu:         new(sync.Mutex),
+		closed:     false,
+		writeCount: 0,
+		path:       path,
+		writer:     writer,
+	}
+}
+
 func (w *WebWriter) Write(bs []byte) (n int, err error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.closed {
+		return 0, &fs.PathError{Op: "write", Path: w.path, Err: io.ErrClosedPipe}
+	}
 	arrayBuffer := js.Global().Get("ArrayBuffer").New(len(bs))
 	uint8Array := js.Global().Get("Uint8Array").New(arrayBuffer)
 	js.CopyBytesToJS(uint8Array, bs)
@@ -314,6 +347,12 @@ func (w *WebWriter) Write(bs []byte) (n int, err error) {
 }
 
 func (w *WebWriter) Close() error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.closed {
+		return &fs.PathError{Op: "close", Path: w.path, Err: io.ErrClosedPipe}
+	}
+	w.closed = true
 	w.writer.Call("flush")
 	w.writer.Call("close")
 	return nil

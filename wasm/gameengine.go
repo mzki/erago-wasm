@@ -107,9 +107,8 @@ func RunIO() (cancelFunc func()) {
 				model.SendStopSkippingWait()
 				SendBackMethodOK(methodName)
 			case "send_quit":
-				// // quit is not exposed since it is handled by engine itself.
-				// model.Quit()
-				// SendBackMethodOK(methodName)
+				model.Quit()
+				SendBackMethodOK(methodName)
 			case "set_textunit_px":
 				wPx := data.Index(1).Float()
 				hPx := data.Index(2).Float()
