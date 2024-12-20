@@ -71,7 +71,7 @@ func sendEventToJs(cbID EngineCallbackID, args ...any) {
 	// jsargs = Array.of(args)
 	// options = { details: jsargs }
 	// self.dispatchEvent(new CustomEvent(cbID.String(), options ))
-	jsargs := jsArrayOf(args...)
+	jsargs := JsArrayOf(args...)
 	options := JsOptions(map[string]any{"detail": jsargs})
 	ev := js.Global().Get("CustomEvent").New(cbID.String(), options)
 	js.Global().Get("self").Call("dispatchEvent", ev)
