@@ -21,12 +21,16 @@ func SendBackStatusPathInvalid(rootPath string) {
 	postMessage("enginestatus", []any{"pathInvalid", rootPath})
 }
 
-func SendBackStatusEngineStartOK() {
-	postMessage("enginestatus", []any{"engineStartOK", true})
+func SendBackStatusEngineInitOK() {
+	postMessage("enginestatus", []any{"engineInitOK", true})
 }
 
-func SendBackStatusEngineStartNG(err error) {
-	postMessage("enginestatus", []any{"engineStartNG", fmt.Errorf("engine start Fail: %w", err).Error()})
+func SendBackStatusEngineInitNG(err error) {
+	postMessage("enginestatus", []any{"engineInitNG", fmt.Errorf("engine init Fail: %w", err).Error()})
+}
+
+func SendBackStatusEngineStartOK() {
+	postMessage("enginestatus", []any{"engineStartOK", true})
 }
 
 func SendBackStatusEndsApp() {

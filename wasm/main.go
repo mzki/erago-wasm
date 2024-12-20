@@ -18,6 +18,10 @@ var (
 func main() {
 	fmt.Printf("---------- Start %s-%s-%s ----------\n", APPNAME, VERSION, COMMIT_HASH)
 	SendBackStatusLaunchOK()
+	defer func() {
+		fmt.Printf("---------- End %s-%s-%s ----------\n", APPNAME, VERSION, COMMIT_HASH)
+		SendBackStatusEndsApp()
+	}()
 
 	const rootDir = "/erago-wasm"
 	store := NewWebFilesystem(rootDir)
@@ -39,23 +43,24 @@ func main() {
 
 	rootPathStore, err := store.Sub(rootPath, false)
 	if err != nil {
-		SendBackStatusEngineStartNG(err)
+		SendBackStatusEngineInitNG(err)
+		return
 	}
-
-	done, quitFunc, err := RunEngine(rootPath, rootPathStore)
+	messenger, quitFunc, err := InitEngine(rootPath, rootPathStore)
 	if err != nil {
-		SendBackStatusEngineStartNG(err)
+		SendBackStatusEngineInitNG(err)
 		return
 	}
 	defer quitFunc()
-	SendBackStatusEngineStartOK()
-
 	cancelRunIO := RunIO()
 	defer cancelRunIO()
+	SendBackStatusEngineInitOK()
 
-	<-done
-	SendBackStatusEndsApp()
-	fmt.Printf("---------- End %s %s ----------\n", APPNAME, VERSION)
+	<-AwaitRunEngine()
+	RunEngine(messenger)
+	SendBackStatusEngineStartOK()
+
+	<-messenger.Done()
 }
 
 func AwaitPathSelect() <-chan string {
@@ -71,9 +76,11 @@ func AwaitPathSelect() <-chan string {
 		data := args[0].Get("data")
 		go func() {
 			switch methodName := data.Index(0).String(); methodName {
-			case "start_engine_with_path":
+			case "init_engine_with_path":
 				rootPath := data.Index(1).String()
 				SendBackMethodOK(methodName)
+				// consume this event so that preventing call other APIs
+				args[0].Call("stopImmediatePropagation")
 				selectPath <- rootPath
 				cancelFunc()
 			}
@@ -82,4 +89,31 @@ func AwaitPathSelect() <-chan string {
 	})
 	js.Global().Get("self").Call("addEventListener", "message", callback, false)
 	return selectPath
+}
+
+func AwaitRunEngine() <-chan struct{} {
+	runEngine := make(chan struct{})
+
+	var callback js.Func
+	cancelFunc := func() {
+		js.Global().Get("self").Call("removeEventListener", "message", callback)
+		callback.Release()
+		close(runEngine)
+	}
+	callback = js.FuncOf(func(this js.Value, args []js.Value) any {
+		data := args[0].Get("data")
+		go func() {
+			switch methodName := data.Index(0).String(); methodName {
+			case "start_engine":
+				SendBackMethodOK(methodName)
+				// consume this event so that preventing call other APIs
+				args[0].Call("stopImmediatePropagation")
+				runEngine <- struct{}{}
+				cancelFunc()
+			}
+		}()
+		return nil
+	})
+	js.Global().Get("self").Call("addEventListener", "message", callback, false)
+	return runEngine
 }

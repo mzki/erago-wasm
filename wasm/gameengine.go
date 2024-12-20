@@ -63,6 +63,10 @@ func (ui *uiMessanger) NotifyQuit(err error) {
 	sendEventToJs(EngineNotifyQuit, err)
 }
 
+func (ui *uiMessanger) Done() <-chan (struct{}) {
+	return ui.done
+}
+
 func sendEventToJs(cbID EngineCallbackID, args ...any) {
 	// jsargs = Array.of(args)
 	// options = { details: jsargs }
@@ -73,23 +77,23 @@ func sendEventToJs(cbID EngineCallbackID, args ...any) {
 	js.Global().Get("self").Call("dispatchEvent", ev)
 }
 
-func RunEngine(baseDir string, fsys model.FileSystemGlob) (done <-chan (struct{}), quitFunc func(), err error) {
-	messenger := newUiMessenger()
+func InitEngine(baseDir string, fsys model.FileSystemGlob) (messenger *uiMessanger, quitFunc func(), err error) {
+	messenger = newUiMessenger()
 	if err := model.Init(messenger, baseDir, &model.InitOptions{
 		ImageFetchType: model.ImageFetchEncodedPNG,
 		FileSystem:     fsys,
 	}); err != nil {
 		return nil, nil, fmt.Errorf("init Error: %w", err)
 	}
-
-	model.Main(messenger)
-
-	done = messenger.done
 	quitFunc = func() {
 		model.Quit()
 	}
 	err = nil
 	return
+}
+
+func RunEngine(appCtx model.AppContext) {
+	model.Main(appCtx)
 }
 
 func RunIO() (cancelFunc func()) {
