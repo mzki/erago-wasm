@@ -100,10 +100,10 @@ func RunIO() (cancelFunc func()) {
 			case "send_command":
 				model.SendCommand(data.Index(1).String())
 				SendBackMethodOK(methodName)
-			case "send_skiiping_wait":
+			case "send_ctrl_skipping_wait":
 				model.SendSkippingWait()
 				SendBackMethodOK(methodName)
-			case "send_stop_skipping_wait":
+			case "send_ctrl_stop_skipping_wait":
 				model.SendStopSkippingWait()
 				SendBackMethodOK(methodName)
 			case "send_quit":
