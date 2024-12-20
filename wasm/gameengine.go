@@ -124,6 +124,9 @@ func RunIO() (cancelFunc func()) {
 					SendBackMethodError(methodName, err)
 				}
 				SendBackMethodOK(methodName)
+
+			default:
+				SendBackMethodNotImplemented(methodName)
 			}
 		}()
 		return nil

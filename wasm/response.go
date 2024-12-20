@@ -4,6 +4,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"syscall/js"
 )
@@ -54,6 +55,12 @@ func SendBackMethodNG(methodName string) {
 
 func SendBackMethodError(methodName string, err error) {
 	postMessage("methodError", []any{methodName, fmt.Errorf("%s Error: %w", methodName, err).Error()})
+}
+
+var ErrNotImplemented = errors.New("not implemented")
+
+func SendBackMethodNotImplemented(methodName string) {
+	SendBackMethodError(methodName, ErrNotImplemented)
 }
 
 func postMessage(action string, value any) {

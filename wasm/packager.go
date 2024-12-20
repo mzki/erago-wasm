@@ -81,6 +81,8 @@ func RunPackager(fsys *WebFileSystem, rootPath string) (cancelFunc func()) {
 				jsBs := ToJsBytes(logBs)
 				SendBackLogBytes(methodName, jsBs)
 
+			default:
+				SendBackMethodNotImplemented(methodName)
 			}
 		}()
 		return nil
