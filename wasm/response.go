@@ -9,32 +9,32 @@ import (
 	"syscall/js"
 )
 
-func SendBackStatusLaunchOK() {
-	postMessage("enginestatus", []any{"launchOK", true})
+func SendBackStatusAppLaunchOK() {
+	postMessage("engineStatus", []any{"appLaunchOK", true})
 }
 
 func SendBackStatusPathSelected(rootPath string) {
-	postMessage("enginestatus", []any{"pathSelected", rootPath})
+	postMessage("engineStatus", []any{"pathSelected", rootPath})
 }
 
 func SendBackStatusPathInvalid(rootPath string) {
-	postMessage("enginestatus", []any{"pathInvalid", rootPath})
+	postMessage("engineStatus", []any{"pathInvalid", rootPath})
 }
 
 func SendBackStatusEngineInitOK() {
-	postMessage("enginestatus", []any{"engineInitOK", true})
+	postMessage("engineStatus", []any{"engineInitOK", true})
 }
 
 func SendBackStatusEngineInitNG(err error) {
-	postMessage("enginestatus", []any{"engineInitNG", fmt.Errorf("engine init Fail: %w", err).Error()})
+	postMessage("engineStatus", []any{"engineInitNG", fmt.Errorf("engine init Fail: %w", err).Error()})
 }
 
 func SendBackStatusEngineStartOK() {
-	postMessage("enginestatus", []any{"engineStartOK", true})
+	postMessage("engineStatus", []any{"engineStartOK", true})
 }
 
-func SendBackStatusEndsApp() {
-	postMessage("enginestatus", []any{"endsApp", true})
+func SendBackStatusAppShutdown() {
+	postMessage("engineStatus", []any{"appShutdown", true})
 }
 
 func SendBackInstalledPath(methodName, installedPath string) {

@@ -108,7 +108,7 @@
                 const args = ev.data[1];
                 console.log("Error", args[0], args[1]);
             }
-            if (ev.data[0] == "enginestatus") {
+            if (ev.data[0] == "engineStatus") {
                 const args = ev.data[1];
                 if (args[0] == "engineInitOK") {
                     engineWorker.postMessage(["set_viewsize", 50, 50]);

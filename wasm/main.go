@@ -17,10 +17,10 @@ var (
 
 func main() {
 	fmt.Printf("---------- Start %s-%s-%s ----------\n", APPNAME, VERSION, COMMIT_HASH)
-	SendBackStatusLaunchOK()
+	SendBackStatusAppLaunchOK()
 	defer func() {
 		fmt.Printf("---------- End %s-%s-%s ----------\n", APPNAME, VERSION, COMMIT_HASH)
-		SendBackStatusEndsApp()
+		SendBackStatusAppShutdown()
 	}()
 
 	const rootDir = "/erago-wasm"
