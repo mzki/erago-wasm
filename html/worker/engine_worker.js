@@ -50,9 +50,9 @@ for (const entry of [
     ["EngineOnPublishJsonTemporary", "addParagraph"],
     ["EngineOnRemove", "removeParagraph"],
     ["EngineOnRemoveAll", "removeParagraph", -1],
-	["EngineOnCommandRequested", "inputStatus"],
-	["EngineOnInputRequested", "inputStatus"],
-	["EngineOnInputRequestClosed", "inputStatus"],
+	["EngineOnCommandRequested", "inputStatus", "commandRequested"],
+	["EngineOnInputRequested", "inputStatus", "inputRequested"],
+	["EngineOnInputRequestClosed", "inputStatus", "inputRequestClosed"],
 ]) {
     if (entry[2] === undefined) {
         self.addEventListener(entry[0], (ev) => {
