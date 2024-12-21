@@ -146,6 +146,14 @@ func RunIO() (cancelFunc func()) {
 				SendBackMethodOK(methodName)
 			}()
 
+		case "string_width":
+			ConsumeMessageEvent(args[0])
+			text := data.Index(1).String()
+			go func() { // to avoid blocking js eventLoop
+				width := model.StringWidth(text)
+				SendBackStringWidth(methodName, width)
+			}()
+
 		}
 		return nil
 	})

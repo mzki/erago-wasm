@@ -41,6 +41,10 @@ func SendBackSavZipBytes(methodName string, bs js.Value) {
 	postMessage("methodResult", []any{methodName, bs})
 }
 
+func SendBackStringWidth(methodName string, width int32) {
+	postMessage("methodResult", []any{methodName, int(width)})
+}
+
 func SendBackMethodOK(methodName string) {
 	postMessage("methodResult", []any{methodName, true})
 }

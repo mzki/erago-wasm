@@ -113,6 +113,7 @@
                 if (args[0] == "appEngineInitOK") {
                     engineWorker.postMessage(["set_viewsize", 50, 50]);
                     engineWorker.postMessage(["set_textunit_px", 10, 10]);
+                    engineWorker.postMessage(["string_width", "1234567890"]);
                     engineWorker.postMessage(["not-implemented-method-demo"]);
                     engineWorker.postMessage(["start_engine"]);
                     setTimeout(() => engineWorker.postMessage(["send_quit"]), 5 * 1000); // to quit automatically
