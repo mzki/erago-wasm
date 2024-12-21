@@ -25,45 +25,45 @@ const (
 	EngineNotifyQuit
 )
 
-type uiMessanger struct {
+type uiMessenger struct {
 	done chan (struct{})
 }
 
-func newUiMessenger() *uiMessanger {
-	return &uiMessanger{done: make(chan struct{})}
+func newUiMessenger() *uiMessenger {
+	return &uiMessenger{done: make(chan struct{})}
 }
 
-func (ui *uiMessanger) OnPublishJson(s string) error {
+func (ui *uiMessenger) OnPublishJson(s string) error {
 	sendEventToJs(EngineOnPublishJson, s)
 	return nil
 }
-func (ui *uiMessanger) OnPublishJsonTemporary(s string) error {
+func (ui *uiMessenger) OnPublishJsonTemporary(s string) error {
 	sendEventToJs(EngineOnPublishJsonTemporary, s)
 	return nil
 }
-func (ui *uiMessanger) OnRemove(nParagraph int) error {
+func (ui *uiMessenger) OnRemove(nParagraph int) error {
 	sendEventToJs(EngineOnRemove, nParagraph)
 	return nil
 }
-func (ui *uiMessanger) OnRemoveAll() error { sendEventToJs(EngineOnRemoveAll); return nil }
+func (ui *uiMessenger) OnRemoveAll() error { sendEventToJs(EngineOnRemoveAll); return nil }
 
 // it is called when mobile.app requires inputting
 // user's command.
-func (ui *uiMessanger) OnCommandRequested() { sendEventToJs(EngineOnCommandRequested) }
+func (ui *uiMessenger) OnCommandRequested() { sendEventToJs(EngineOnCommandRequested) }
 
 // it is called when mobile.app requires just input any command.
-func (ui *uiMessanger) OnInputRequested() { sendEventToJs(EngineOnInputRequested) }
+func (ui *uiMessenger) OnInputRequested() { sendEventToJs(EngineOnInputRequested) }
 
 // it is called when mobile.app no longer requires any input,
 // such as just-input and command.
-func (ui *uiMessanger) OnInputRequestClosed() { sendEventToJs(EngineOnInputRequestClosed) }
+func (ui *uiMessenger) OnInputRequestClosed() { sendEventToJs(EngineOnInputRequestClosed) }
 
-func (ui *uiMessanger) NotifyQuit(err error) {
+func (ui *uiMessenger) NotifyQuit(err error) {
 	close(ui.done)
 	sendEventToJs(EngineNotifyQuit, err)
 }
 
-func (ui *uiMessanger) Done() <-chan (struct{}) {
+func (ui *uiMessenger) Done() <-chan (struct{}) {
 	return ui.done
 }
 
@@ -77,7 +77,7 @@ func sendEventToJs(cbID EngineCallbackID, args ...any) {
 	js.Global().Get("self").Call("dispatchEvent", ev)
 }
 
-func InitEngine(baseDir string, fsys model.FileSystemGlob) (messenger *uiMessanger, quitFunc func(), err error) {
+func InitEngine(baseDir string, fsys model.FileSystemGlob) (messenger *uiMessenger, quitFunc func(), err error) {
 	messenger = newUiMessenger()
 	if err := model.Init(messenger, baseDir, &model.InitOptions{
 		ImageFetchType: model.ImageFetchEncodedPNG,

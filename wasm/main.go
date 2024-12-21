@@ -26,59 +26,56 @@ func main() {
 	const rootDir = "/erago-wasm"
 	store := NewWebFilesystem(rootDir)
 
-	var rootPath string
+	var initResult engineInitResult
 	{
+		initResultCh, cancelInitEngine := AwaitInitEngineWithPath(store, rootDir)
 		cancelRunPkg := RunPackager(store, rootDir)
-		pathCh, cancelPathSelect := AwaitPathSelect()
 		cancelNotImpl := RunNotImplemented()
-		for {
-			rootPath = <-pathCh
-			if !strings.HasPrefix(rootPath, rootDir) {
-				SendBackStatusPathInvalid(rootPath)
-				continue
-			}
-			break
-		}
-		SendBackStatusPathSelected(rootPath)
+		SendBackStatusWaitForEngineInit()
+
+		initResult = <-initResultCh
+
+		cancelInitEngine()
 		cancelRunPkg()
-		cancelPathSelect()
 		cancelNotImpl()
 	}
-
-	rootPathStore, err := store.Sub(rootPath, false)
-	if err != nil {
-		SendBackStatusEngineInitNG(err)
-		return
-	}
-	messenger, quitFunc, err := InitEngine(rootPath, rootPathStore)
-	if err != nil {
-		SendBackStatusEngineInitNG(err)
-		return
-	}
-	defer quitFunc()
+	defer initResult.quitFunc()
 
 	waitRunEngine := AwaitRunEngine()
 	cancelRunIO := RunIO()
 	defer cancelRunIO()
 	cancelNotImpl := RunNotImplemented()
 	defer cancelNotImpl()
-	SendBackStatusEngineInitOK()
+	SendBackStatusEngineInitOK(initResult.rootPath)
 
 	<-waitRunEngine
-	RunEngine(messenger)
+	RunEngine(initResult.messenger)
 	SendBackStatusEngineStartOK()
 
-	<-messenger.Done()
+	<-initResult.messenger.Done()
 }
 
-func AwaitPathSelect() (path <-chan string, cancelFunc func()) {
-	selectPath := make(chan string)
+type engineInitResult struct {
+	messenger *uiMessenger
+	quitFunc  func()
+	rootPath  string
+}
+
+func AwaitInitEngineWithPath(
+	store *WebFileSystem,
+	rootDir string,
+) (
+	resultChan <-chan engineInitResult,
+	cancelFunc func(),
+) {
+	result := make(chan engineInitResult)
+	resultChan = result
 
 	var callback js.Func
 	cancelFunc = func() {
 		js.Global().Get("self").Call("removeEventListener", "message", callback)
 		callback.Release()
-		close(selectPath)
+		close(result)
 	}
 	callback = js.FuncOf(func(this js.Value, args []js.Value) any {
 		data := args[0].Get("data")
@@ -86,15 +83,33 @@ func AwaitPathSelect() (path <-chan string, cancelFunc func()) {
 		case "init_engine_with_path":
 			ConsumeMessageEvent(args[0])
 			rootPath := data.Index(1).String()
-			go func() {
-				selectPath <- rootPath
+			if !strings.HasPrefix(rootPath, rootDir) {
+				SendBackMethodError(methodName, fmt.Errorf("selected path(%s) should be under %s", rootPath, rootDir))
+				return nil
+			}
+			go func() { // to avoid blocking js eventLoop
+				rootPathStore, err := store.Sub(rootPath, false)
+				if err != nil {
+					SendBackMethodError(methodName, err)
+					return
+				}
+				messenger, quitFunc, err := InitEngine(rootPath, rootPathStore)
+				if err != nil {
+					SendBackMethodError(methodName, err)
+					return
+				}
+				result <- engineInitResult{
+					messenger: messenger,
+					quitFunc:  quitFunc,
+					rootPath:  rootPath,
+				}
 				SendBackMethodOK(methodName)
 			}()
 		}
 		return nil
 	})
 	js.Global().Get("self").Call("addEventListener", "message", callback, false)
-	return selectPath, cancelFunc
+	return
 }
 
 func AwaitRunEngine() <-chan struct{} {

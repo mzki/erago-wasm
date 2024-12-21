@@ -110,7 +110,7 @@
             }
             if (ev.data[0] == "engineStatus") {
                 const args = ev.data[1];
-                if (args[0] == "engineInitOK") {
+                if (args[0] == "appEngineInitOK") {
                     engineWorker.postMessage(["set_viewsize", 50, 50]);
                     engineWorker.postMessage(["set_textunit_px", 10, 10]);
                     engineWorker.postMessage(["not-implemented-method-demo"]);

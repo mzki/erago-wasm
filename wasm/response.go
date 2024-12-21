@@ -13,24 +13,16 @@ func SendBackStatusAppLaunchOK() {
 	postMessage("engineStatus", []any{"appLaunchOK", true})
 }
 
-func SendBackStatusPathSelected(rootPath string) {
-	postMessage("engineStatus", []any{"pathSelected", rootPath})
+func SendBackStatusWaitForEngineInit() {
+	postMessage("engineStatus", []any{"appWaitForEngineInit", true})
 }
 
-func SendBackStatusPathInvalid(rootPath string) {
-	postMessage("engineStatus", []any{"pathInvalid", rootPath})
-}
-
-func SendBackStatusEngineInitOK() {
-	postMessage("engineStatus", []any{"engineInitOK", true})
-}
-
-func SendBackStatusEngineInitNG(err error) {
-	postMessage("engineStatus", []any{"engineInitNG", fmt.Errorf("engine init Fail: %w", err).Error()})
+func SendBackStatusEngineInitOK(rootPath string) {
+	postMessage("engineStatus", []any{"appEngineInitOK", rootPath})
 }
 
 func SendBackStatusEngineStartOK() {
-	postMessage("engineStatus", []any{"engineStartOK", true})
+	postMessage("engineStatus", []any{"appEngineStartOK", true})
 }
 
 func SendBackStatusAppShutdown() {
