@@ -13,16 +13,17 @@ import (
 func RunPackager(fsys *WebFileSystem, rootPath string) (cancelFunc func()) {
 	pkgCallbacks := js.FuncOf(func(this js.Value, args []js.Value) any {
 		data := args[0].Get("data")
-		go func() {
-			switch methodName := data.Index(0).String(); methodName {
-			case "install_package":
-				bs := ToGoBytes(data.Index(1))
-				var baseName string
-				if data.Index(2).IsUndefined() {
-					baseName = "eragoPkg"
-				} else {
-					baseName = data.Index(2).String()
-				}
+		switch methodName := data.Index(0).String(); methodName {
+		case "install_package":
+			ConsumeMessageEvent(args[0])
+			bs := ToGoBytes(data.Index(1))
+			var baseName string
+			if data.Index(2).IsUndefined() {
+				baseName = "eragoPkg"
+			} else {
+				baseName = data.Index(2).String()
+			}
+			go func() { // to avoid blocking js eventLoop
 				subFSys, err := fsys.Sub(baseName, true)
 				if err != nil {
 					SendBackMethodError(methodName, err)
@@ -35,25 +36,34 @@ func RunPackager(fsys *WebFileSystem, rootPath string) (cancelFunc func()) {
 				}
 				installedPath := filepath.Join(rootPath, baseName, extractedDir)
 				SendBackInstalledPath(methodName, installedPath)
+			}()
 
-			case "uninstall_package":
-				fpath := data.Index(1).String()
+		case "uninstall_package":
+			ConsumeMessageEvent(args[0])
+			fpath := data.Index(1).String()
+			go func() { // to avoid blocking js eventLoop
 				if err := fsys.Remove(fpath); err != nil {
 					SendBackMethodError(methodName, err)
 					return
 				}
 				SendBackMethodOK(methodName)
+			}()
 
-			case "validate_package":
-				rootPath := data.Index(1).String()
+		case "validate_package":
+			ConsumeMessageEvent(args[0])
+			rootPath := data.Index(1).String()
+			go func() { // to avoid blocking js eventLoop
 				if fsys.Exist(rootPath) {
 					SendBackMethodOK(methodName)
 				} else {
 					SendBackMethodNG(methodName)
 				}
+			}()
 
-			case "exportsav":
-				rootPath := data.Index(1).String()
+		case "exportsav":
+			ConsumeMessageEvent(args[0])
+			rootPath := data.Index(1).String()
+			go func() { // to avoid blocking js eventLoop
 				savBs, err := model.ExportSav(rootPath, fsys)
 				if err != nil {
 					SendBackMethodError(methodName, err)
@@ -61,18 +71,24 @@ func RunPackager(fsys *WebFileSystem, rootPath string) (cancelFunc func()) {
 				}
 				jsBs := ToJsBytes(savBs)
 				SendBackSavZipBytes(methodName, jsBs)
+			}()
 
-			case "importsav":
-				rootPath := data.Index(1).String()
+		case "importsav":
+			ConsumeMessageEvent(args[0])
+			rootPath := data.Index(1).String()
+			go func() { // to avoid blocking js eventLoop
 				bs := ToGoBytes(data.Index(2))
 				if err := model.ImportSav(rootPath, fsys, bs); err != nil {
 					SendBackMethodError(methodName, err)
 					return
 				}
 				SendBackMethodOK(methodName)
+			}()
 
-			case "exportlog":
-				rootPath := data.Index(1).String()
+		case "exportlog":
+			ConsumeMessageEvent(args[0])
+			rootPath := data.Index(1).String()
+			go func() { // to avoid blocking js eventLoop
 				logBs, err := model.ExportLog(rootPath, fsys)
 				if err != nil {
 					SendBackMethodError(methodName, err)
@@ -80,11 +96,9 @@ func RunPackager(fsys *WebFileSystem, rootPath string) (cancelFunc func()) {
 				}
 				jsBs := ToJsBytes(logBs)
 				SendBackLogBytes(methodName, jsBs)
+			}()
 
-			default:
-				SendBackMethodNotImplemented(methodName)
-			}
-		}()
+		}
 		return nil
 	})
 

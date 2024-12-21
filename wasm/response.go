@@ -58,7 +58,7 @@ func SendBackMethodNG(methodName string) {
 }
 
 func SendBackMethodError(methodName string, err error) {
-	postMessage("methodError", []any{methodName, fmt.Errorf("%s Error: %w", methodName, err).Error()})
+	postMessage("methodError", []any{methodName, fmt.Errorf("%s: Error: %w", methodName, err).Error()})
 }
 
 var ErrNotImplemented = errors.New("not implemented")

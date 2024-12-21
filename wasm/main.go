@@ -29,8 +29,10 @@ func main() {
 	var rootPath string
 	{
 		cancelRunPkg := RunPackager(store, rootDir)
+		pathCh, cancelPathSelect := AwaitPathSelect()
+		cancelNotImpl := RunNotImplemented()
 		for {
-			rootPath = <-AwaitPathSelect()
+			rootPath = <-pathCh
 			if !strings.HasPrefix(rootPath, rootDir) {
 				SendBackStatusPathInvalid(rootPath)
 				continue
@@ -39,6 +41,8 @@ func main() {
 		}
 		SendBackStatusPathSelected(rootPath)
 		cancelRunPkg()
+		cancelPathSelect()
+		cancelNotImpl()
 	}
 
 	rootPathStore, err := store.Sub(rootPath, false)
@@ -52,43 +56,45 @@ func main() {
 		return
 	}
 	defer quitFunc()
+
+	waitRunEngine := AwaitRunEngine()
 	cancelRunIO := RunIO()
 	defer cancelRunIO()
+	cancelNotImpl := RunNotImplemented()
+	defer cancelNotImpl()
 	SendBackStatusEngineInitOK()
 
-	<-AwaitRunEngine()
+	<-waitRunEngine
 	RunEngine(messenger)
 	SendBackStatusEngineStartOK()
 
 	<-messenger.Done()
 }
 
-func AwaitPathSelect() <-chan string {
+func AwaitPathSelect() (path <-chan string, cancelFunc func()) {
 	selectPath := make(chan string)
 
 	var callback js.Func
-	cancelFunc := func() {
+	cancelFunc = func() {
 		js.Global().Get("self").Call("removeEventListener", "message", callback)
 		callback.Release()
 		close(selectPath)
 	}
 	callback = js.FuncOf(func(this js.Value, args []js.Value) any {
 		data := args[0].Get("data")
-		go func() {
-			switch methodName := data.Index(0).String(); methodName {
-			case "init_engine_with_path":
-				rootPath := data.Index(1).String()
-				SendBackMethodOK(methodName)
-				// consume this event so that preventing call other APIs
-				args[0].Call("stopImmediatePropagation")
+		switch methodName := data.Index(0).String(); methodName {
+		case "init_engine_with_path":
+			ConsumeMessageEvent(args[0])
+			rootPath := data.Index(1).String()
+			go func() {
 				selectPath <- rootPath
-				cancelFunc()
-			}
-		}()
+				SendBackMethodOK(methodName)
+			}()
+		}
 		return nil
 	})
 	js.Global().Get("self").Call("addEventListener", "message", callback, false)
-	return selectPath
+	return selectPath, cancelFunc
 }
 
 func AwaitRunEngine() <-chan struct{} {
@@ -102,18 +108,34 @@ func AwaitRunEngine() <-chan struct{} {
 	}
 	callback = js.FuncOf(func(this js.Value, args []js.Value) any {
 		data := args[0].Get("data")
-		go func() {
-			switch methodName := data.Index(0).String(); methodName {
-			case "start_engine":
-				SendBackMethodOK(methodName)
-				// consume this event so that preventing call other APIs
-				args[0].Call("stopImmediatePropagation")
+		switch methodName := data.Index(0).String(); methodName {
+		case "start_engine":
+			ConsumeMessageEvent(args[0])
+			go func() {
 				runEngine <- struct{}{}
+				SendBackMethodOK(methodName)
 				cancelFunc()
-			}
-		}()
+			}()
+		}
 		return nil
 	})
 	js.Global().Get("self").Call("addEventListener", "message", callback, false)
 	return runEngine
+}
+
+func RunNotImplemented() (cancelFunc func()) {
+	var callback js.Func
+	cancelFunc = func() {
+		js.Global().Get("self").Call("removeEventListener", "message", callback)
+		callback.Release()
+	}
+	callback = js.FuncOf(func(this js.Value, args []js.Value) any {
+		data := args[0].Get("data")
+		methodName := data.Index(0).String()
+		ConsumeMessageEvent(args[0])
+		SendBackMethodNotImplemented(methodName)
+		return nil
+	})
+	js.Global().Get("self").Call("addEventListener", "message", callback, false)
+	return
 }

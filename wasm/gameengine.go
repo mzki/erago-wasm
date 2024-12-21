@@ -99,40 +99,54 @@ func RunEngine(appCtx model.AppContext) {
 func RunIO() (cancelFunc func()) {
 	ioCallbacks := js.FuncOf(func(this js.Value, args []js.Value) any {
 		data := args[0].Get("data")
-		go func() {
-			switch methodName := data.Index(0).String(); methodName {
-			case "send_command":
+		switch methodName := data.Index(0).String(); methodName {
+		case "send_command":
+			ConsumeMessageEvent(args[0])
+			go func() { // to avoid blocking js eventLoop
 				model.SendCommand(data.Index(1).String())
 				SendBackMethodOK(methodName)
-			case "send_ctrl_skipping_wait":
+			}()
+		case "send_ctrl_skipping_wait":
+			ConsumeMessageEvent(args[0])
+			go func() { // to avoid blocking js eventLoop
 				model.SendSkippingWait()
 				SendBackMethodOK(methodName)
-			case "send_ctrl_stop_skipping_wait":
+			}()
+		case "send_ctrl_stop_skipping_wait":
+			ConsumeMessageEvent(args[0])
+			go func() { // to avoid blocking js eventLoop
 				model.SendStopSkippingWait()
 				SendBackMethodOK(methodName)
-			case "send_quit":
+			}()
+		case "send_quit":
+			ConsumeMessageEvent(args[0])
+			go func() { // to avoid blocking js eventLoop
 				model.Quit()
 				SendBackMethodOK(methodName)
-			case "set_textunit_px":
-				wPx := data.Index(1).Float()
-				hPx := data.Index(2).Float()
+			}()
+		case "set_textunit_px":
+			ConsumeMessageEvent(args[0])
+			wPx := data.Index(1).Float()
+			hPx := data.Index(2).Float()
+			go func() { // to avoid blocking js eventLoop
 				if err := model.SetTextUnitPx(wPx, hPx); err != nil {
 					SendBackMethodError(methodName, err)
 				}
 				SendBackMethodOK(methodName)
+			}()
 
-			case "set_viewsize":
-				lineCount := data.Index(1).Int()
-				lineWidth := data.Index(2).Int()
+		case "set_viewsize":
+			ConsumeMessageEvent(args[0])
+			lineCount := data.Index(1).Int()
+			lineWidth := data.Index(2).Int()
+			go func() { // to avoid blocking js eventLoop
 				if err := model.SetViewSize(lineCount, lineWidth); err != nil {
 					SendBackMethodError(methodName, err)
 				}
 				SendBackMethodOK(methodName)
+			}()
 
-			default:
-				SendBackMethodNotImplemented(methodName)
-			}
-		}()
+		}
 		return nil
 	})
 

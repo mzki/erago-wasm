@@ -30,3 +30,7 @@ func JsOptions(opt map[string]any) js.Value {
 func JsArrayOf(args ...any) js.Value {
 	return js.Global().Get("Array").Call("of", args...)
 }
+
+func ConsumeMessageEvent(ev js.Value) {
+	ev.Call("stopImmediatePropagation")
+}
