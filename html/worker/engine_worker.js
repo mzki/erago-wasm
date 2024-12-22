@@ -1,3 +1,7 @@
+// Copyright 2024 The erago-wasm Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 importScripts("wasm_exec.js");
 
 if (!WebAssembly.instantiateStreaming) { // polyfill
