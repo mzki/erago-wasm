@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"syscall/js"
 
+	"github.com/mzki/erago/app"
 	model "github.com/mzki/erago/mobile/model/v2"
 )
 
@@ -52,8 +53,9 @@ func RunPackager(fsys *WebFileSystem, rootPath string) (cancelFunc func()) {
 		case "validate_package":
 			ConsumeMessageEvent(args[0])
 			rootPath := data.Index(1).String()
+			confPath := filepath.Join(rootPath, app.ConfigFile)
 			go func() { // to avoid blocking js eventLoop
-				if fsys.Exist(rootPath) {
+				if fsys.ExistDir(rootPath) && fsys.Exist(confPath) {
 					SendBackMethodOK(methodName)
 				} else {
 					SendBackMethodNG(methodName)
@@ -64,10 +66,19 @@ func RunPackager(fsys *WebFileSystem, rootPath string) (cancelFunc func()) {
 			ConsumeMessageEvent(args[0])
 			rootPath := data.Index(1).String()
 			go func() { // to avoid blocking js eventLoop
-				savBs, err := model.ExportSav(rootPath, fsys)
+				subFsys, err := fsys.Sub(rootPath, false)
 				if err != nil {
 					SendBackMethodError(methodName, err)
 					return
+				}
+				savBs, err := model.ExportSav(rootPath, subFsys)
+				if err != nil {
+					if model.IsExportFileNotFound(err) {
+						savBs = []byte{} // suceeded with empty bytes.
+					} else {
+						SendBackMethodError(methodName, err)
+						return
+					}
 				}
 				jsBs := ToJsBytes(savBs)
 				SendBackSavZipBytes(methodName, jsBs)
@@ -78,7 +89,12 @@ func RunPackager(fsys *WebFileSystem, rootPath string) (cancelFunc func()) {
 			rootPath := data.Index(1).String()
 			go func() { // to avoid blocking js eventLoop
 				bs := ToGoBytes(data.Index(2))
-				if err := model.ImportSav(rootPath, fsys, bs); err != nil {
+				subFsys, err := fsys.Sub(rootPath, false)
+				if err != nil {
+					SendBackMethodError(methodName, err)
+					return
+				}
+				if err := model.ImportSav(rootPath, subFsys, bs); err != nil {
 					SendBackMethodError(methodName, err)
 					return
 				}
@@ -89,10 +105,19 @@ func RunPackager(fsys *WebFileSystem, rootPath string) (cancelFunc func()) {
 			ConsumeMessageEvent(args[0])
 			rootPath := data.Index(1).String()
 			go func() { // to avoid blocking js eventLoop
-				logBs, err := model.ExportLog(rootPath, fsys)
+				subFsys, err := fsys.Sub(rootPath, false)
 				if err != nil {
 					SendBackMethodError(methodName, err)
 					return
+				}
+				logBs, err := model.ExportLog(rootPath, subFsys)
+				if err != nil {
+					if model.IsExportFileNotFound(err) {
+						logBs = []byte{} // suceeded with empty bytes.
+					} else {
+						SendBackMethodError(methodName, err)
+						return
+					}
 				}
 				jsBs := ToJsBytes(logBs)
 				SendBackLogBytes(methodName, jsBs)

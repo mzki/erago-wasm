@@ -121,6 +121,15 @@ func (fsys *WebFileSystem) Exist(fpath string) bool {
 	return jsErr.IsNull()
 }
 
+func (fsys *WebFileSystem) ExistDir(fpath string) bool {
+	fpath, err := fsys.relPath(fpath)
+	if err != nil {
+		return false
+	}
+	_, jsErr := recursiveGetDirHandle(fsys.root, fpath, JsOptions(map[string]any{"create": false}))
+	return jsErr.IsNull()
+}
+
 func (fsys *WebFileSystem) Glob(pattern string) (*model.StringList, error) {
 	pattern, err := fsys.relPath(pattern)
 	if err != nil {
@@ -203,6 +212,7 @@ func (fsys *WebFileSystem) Remove(fpath string) error {
 		return &fs.PathError{Op: "remove", Path: fpath, Err: err}
 	}
 	dir, file := filepath.Split(fpath)
+	dir = strings.TrimSuffix(dir, string(os.PathSeparator))
 	if len(dir) == 0 {
 		_, jsErr := Await1(
 			fsys.root.Call("removeEntry", file, JsOptions(map[string]any{"recursive": true})),
