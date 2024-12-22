@@ -66,7 +66,9 @@ for (const entry of [
 }
 
 self.addEventListener("EngineNotifyQuit", (ev) => {
-    self.postMessage(["engineEvent", ["notifyQuit", ev.detail[0]]]);
+    // null(means no error) treated as empty string to be consitent with string type.
+    let msg = (ev.detail[0]) ? ev.detail[0] : "";
+    self.postMessage(["engineEvent", ["notifyQuit", msg]]);
 })
 
 self.postMessage(["engine_worker loaded!"])
