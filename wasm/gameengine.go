@@ -10,11 +10,12 @@ import (
 	model "github.com/mzki/erago/mobile/model/v2"
 )
 
+//go:generate stringer -type=EngineCallbackID
 type EngineCallbackID int
 
 const (
-	EngineOnPublishJson EngineCallbackID = iota
-	EngineOnPublishJsonTemporary
+	EngineOnPublishBytes EngineCallbackID = iota
+	EngineOnPublishBytesTemporary
 	EngineOnRemove
 	EngineOnRemoveAll
 
@@ -25,6 +26,8 @@ const (
 	EngineNotifyQuit
 )
 
+var _ model.UI = &uiMessenger{}
+
 type uiMessenger struct {
 	done chan (struct{})
 }
@@ -33,12 +36,12 @@ func newUiMessenger() *uiMessenger {
 	return &uiMessenger{done: make(chan struct{})}
 }
 
-func (ui *uiMessenger) OnPublishJson(s string) error {
-	sendEventToJs(EngineOnPublishJson, s)
+func (ui *uiMessenger) OnPublishBytes(bs []byte) error {
+	sendEventToJs(EngineOnPublishBytes, ToJsBytes(bs))
 	return nil
 }
-func (ui *uiMessenger) OnPublishJsonTemporary(s string) error {
-	sendEventToJs(EngineOnPublishJsonTemporary, s)
+func (ui *uiMessenger) OnPublishBytesTemporary(bs []byte) error {
+	sendEventToJs(EngineOnPublishBytesTemporary, ToJsBytes(bs))
 	return nil
 }
 func (ui *uiMessenger) OnRemove(nParagraph int) error {
@@ -77,11 +80,42 @@ func sendEventToJs(cbID EngineCallbackID, args ...any) {
 	js.Global().Get("self").Call("dispatchEvent", ev)
 }
 
-func InitEngine(baseDir string, fsys model.FileSystemGlob) (messenger *uiMessenger, quitFunc func(), err error) {
+type EngineOptions struct {
+	ImageFetchType      int
+	MessageByteEncoding int
+}
+
+const (
+	EngineOptionsKeyImageFetchTyoe      = "imageFetchType"
+	EngineOptionsKeyMessageByteEncoding = "messageByteEncoding"
+)
+
+func ParseEngineOptions(opt js.Value) EngineOptions {
+	defaultOpt := EngineOptions{
+		ImageFetchType:      model.ImageFetchEncodedPNG,
+		MessageByteEncoding: model.MessageByteEncodingJson,
+	}
+	if opt.Type() != js.TypeObject {
+		return defaultOpt
+	}
+
+	if v := opt.Get(EngineOptionsKeyImageFetchTyoe); v.Type() == js.TypeNumber {
+		fmt.Printf("Found options.%s = %v\n", EngineOptionsKeyImageFetchTyoe, v)
+		defaultOpt.ImageFetchType = v.Int()
+	}
+	if v := opt.Get(EngineOptionsKeyMessageByteEncoding); v.Type() == js.TypeNumber {
+		fmt.Printf("Found options.%s = %v\n", EngineOptionsKeyMessageByteEncoding, v)
+		defaultOpt.MessageByteEncoding = v.Int()
+	}
+	return defaultOpt
+}
+
+func InitEngine(baseDir string, fsys model.FileSystemGlob, opt EngineOptions) (messenger *uiMessenger, quitFunc func(), err error) {
 	messenger = newUiMessenger()
 	if err := model.Init(messenger, baseDir, &model.InitOptions{
-		ImageFetchType: model.ImageFetchEncodedPNG,
-		FileSystem:     fsys,
+		ImageFetchType:      opt.ImageFetchType,
+		MessageByteEncoding: opt.MessageByteEncoding,
+		FileSystem:          fsys,
 	}); err != nil {
 		return nil, nil, fmt.Errorf("init Error: %w", err)
 	}

@@ -2,15 +2,16 @@ module github.com/mzki/erago-wasm
 
 go 1.23.2
 
-require github.com/mzki/erago v0.9.1-0.20241214110236-c473833e2be5
+require github.com/mzki/erago v0.9.1-0.20250801180718-b4cfe9508e44
 
 require (
 	dmitri.shuralyov.com/gpu/mtl v0.0.0-20221208032759-85de2813cf6b // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
+	github.com/aperturerobotics/json-iterator-lite v1.0.0 // indirect
+	github.com/aperturerobotics/protobuf-go-lite v0.10.0 // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20231223183121-56fa3ac82ce7 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/jezek/xgb v1.1.1 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/psanford/memfs v0.0.0-20241019191636-4ef911798f9b // indirect

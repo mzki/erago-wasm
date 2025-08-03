@@ -36,8 +36,8 @@ self.addEventListener("message", (ev) => {
 /*
     Events published from Engine.
 
-	EngineOnPublishJson EngineCallbackID = iota
-	EngineOnPublishJsonTemporary
+	EngineOnPublishBytes EngineCallbackID = iota
+	EngineOnPublishBytesTemporary
 	EngineOnRemove
 	EngineOnRemoveAll
 
@@ -50,8 +50,8 @@ self.addEventListener("message", (ev) => {
 
 // entry: {eventName, messageType, [arg]}
 for (const entry of [
-    ["EngineOnPublishJson", "addParagraph"],
-    ["EngineOnPublishJsonTemporary", "addParagraph"],
+    ["EngineOnPublishBytes", "addParagraph"],
+    ["EngineOnPublishBytesTemporary", "addParagraph"],
     ["EngineOnRemove", "removeParagraph"],
     ["EngineOnRemoveAll", "removeParagraph", -1],
 	["EngineOnCommandRequested", "inputStatus", "commandRequested"],

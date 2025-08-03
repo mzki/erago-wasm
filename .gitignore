@@ -5,3 +5,5 @@ wasm_exec.js
 *.pem
 
 build/*
+web/
+web-wasm/

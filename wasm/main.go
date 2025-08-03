@@ -87,13 +87,15 @@ func AwaitInitEngineWithPath(
 				SendBackMethodError(methodName, fmt.Errorf("selected path(%s) should be under %s", rootPath, rootDir))
 				return nil
 			}
+			opt := ParseEngineOptions(data.Index(2))
+			fmt.Printf("EngineOptions: %v\n", opt)
 			go func() { // to avoid blocking js eventLoop
 				rootPathStore, err := store.Sub(rootPath, false)
 				if err != nil {
 					SendBackMethodError(methodName, err)
 					return
 				}
-				messenger, quitFunc, err := InitEngine(rootPath, rootPathStore)
+				messenger, quitFunc, err := InitEngine(rootPath, rootPathStore, opt)
 				if err != nil {
 					SendBackMethodError(methodName, err)
 					return

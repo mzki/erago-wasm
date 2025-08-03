@@ -95,13 +95,18 @@
             engineWorker.postMessage(["install_package", new Uint8Array(bytes), "eragoPkg-tmp"]);
         }
 
+        const textDecoder = new TextDecoder('utf-8'); // Specify the encoding
         engineWorker.onmessage = (ev) => {
             console.log("onmessage", ev.data, ev.timestamp)
             if (ev.data[0] == "methodResult") {
                 const args = ev.data[1];
                 if (args[0] == "install_package") {
                     const installedPath = args[1];
-                    engineWorker.postMessage(["init_engine_with_path", installedPath]);
+                    const options = {
+                        messageByteEncoding: 1, // 0:json, 1:protobuf
+                        imageFetchType: 1, // 1:none, 2:rawrgba, 3:encoded_png
+                    };
+                    engineWorker.postMessage(["init_engine_with_path", installedPath, options]);
                 }
             }
             if (ev.data[0] == "methodError") {
@@ -123,6 +128,12 @@
                 const args = ev.data[1]
                 if (args[0] == "notifyQuit") {
                     setTimeout(() => engineWorker.postMessage(["run_engine_worker"]), 3 * 1000); // to restart application.
+                }
+                if (args[0] == "addParagraph") {
+                    // NOTE: To show json message in console 
+                    let s = textDecoder.decode(args[1]);
+                    console.log("addParagraph", s);
+                    console.log("addParagraph", args[1].length);
                 }
             }
         }
