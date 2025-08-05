@@ -59,10 +59,19 @@ for (const entry of [
 	["EngineOnInputRequestClosed", "inputStatus", "inputRequestClosed"],
 ]) {
     if (entry[2] === undefined) {
-        self.addEventListener(entry[0], (ev) => {
-            self.postMessage(["engineEvent", [entry[1], ev.detail[0]]])
-        })
+        // Use ev.detail directlly as postMessage arg 
+        if (entry[1] == "addParagraph") {
+            self.addEventListener(entry[0], (ev) => {
+                let transferrables = [ev.detail[0].buffer]; // for zero copy, move sematics for large binary.
+                self.postMessage(["engineEvent", [entry[1], ev.detail[0]]], transferrables)
+            })
+        } else {
+            self.addEventListener(entry[0], (ev) => {
+                self.postMessage(["engineEvent", [entry[1], ev.detail[0]]], transferrables)
+            })
+        }
     } else {
+        // Use entry constant as postMessage arg 
         self.addEventListener(entry[0], (ev) => {
             self.postMessage(["engineEvent", [entry[1], entry[2]]])
         })
