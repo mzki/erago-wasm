@@ -30,3 +30,14 @@ Make sure WebWorker related files, which are under `html/worker`, should be plac
 
 Then you should add code to launch WebWorker using `engine_worker.js` into your script, and communicate with the worker to archieve complete application. 
 
+### Proto file for complex message
+
+There is a protobuf encoded message which is sent from WASM game engine and notify it as `engineEvent` with `addParagraph` tag. The protobuf schema of encoded message is distributed by `proto/pubdata.proto` in release .zip package.
+
+Please make sure to use the same version of .proto file and .wasm to be consistent with message format.  
+
+For develelopers of this repository, you can run following command to store `proto/pubdata.proto`:
+
+```bash
+bash scripts/copy-proto.sh
+```

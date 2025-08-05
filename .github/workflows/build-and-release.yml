@@ -89,6 +89,18 @@ jobs:
           retention-days: 7 # for 1 week
           if-no-files-found: error
 
+      - name: Collecting dev dependencies (proto)
+        run: |
+          bash scripts/copy-proto.sh ./proto
+
+      - name: Upload built dev dependencies (proto)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dev-dependencies-proto
+          path: ./proto
+          retention-days: 7 # for 1 week
+          if-no-files-found: error
+
 
   # Build licenses of dependencies.
   build-credits:
@@ -159,6 +171,12 @@ jobs:
         with:
           name: generated-credits
           path: build
+
+      - name: Download dev dependencies (proto)
+        uses: actions/download-artifact@v4
+        with:
+          name: dev-dependencies-proto
+          path: proto
 
       - name: Archive
         env:

@@ -29,6 +29,7 @@ target_dir=$outputdir/$target_filename
 mkdir -p $target_dir
 cp -t $target_dir LICENSE README.md $extrafiles
 cp -r html $target_dir
+cp -r proto $target_dir && rm -f $target_dir/proto/.gitkeep
 (
     pushd $outputdir
     zip -r $target_filename.zip $target_filename

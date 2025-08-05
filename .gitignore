@@ -7,3 +7,6 @@ wasm_exec.js
 build/*
 web/
 web-wasm/
+
+# below file is from dependency library. not own by this repo.
+proto/pubdata.proto
