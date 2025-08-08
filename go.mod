@@ -2,7 +2,7 @@ module github.com/mzki/erago-wasm
 
 go 1.23.2
 
-require github.com/mzki/erago v0.9.1-0.20250801180718-b4cfe9508e44
+require github.com/mzki/erago v0.10.0
 
 require (
 	dmitri.shuralyov.com/gpu/mtl v0.0.0-20221208032759-85de2813cf6b // indirect
