@@ -62,14 +62,20 @@ func (ui *uiMessenger) OnInputRequested() { sendEventToJs(EngineOnInputRequested
 func (ui *uiMessenger) OnInputRequestClosed() { sendEventToJs(EngineOnInputRequestClosed) }
 
 func (ui *uiMessenger) NotifyQuit(err error) {
+	if err != nil {
+		sendEventToJs(EngineNotifyQuit, err.Error())
+	} else {
+		sendEventToJs(EngineNotifyQuit, nil)
+	}
+	// close should be last since it blocks main()
 	close(ui.done)
-	sendEventToJs(EngineNotifyQuit, err)
 }
 
 func (ui *uiMessenger) Done() <-chan (struct{}) {
 	return ui.done
 }
 
+// NOTE: make sure args should be convertable via js.ValueOf.
 func sendEventToJs(cbID EngineCallbackID, args ...any) {
 	// jsargs = Array.of(args)
 	// options = { details: jsargs }
