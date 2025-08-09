@@ -11,7 +11,7 @@ if (!WebAssembly.instantiateStreaming) { // polyfill
     };
 }
 
-const go = new Go();
+var go = new Go();
 let mod, inst;
 WebAssembly.instantiateStreaming(fetch("erago.wasm"), go.importObject).then((result) => {
     mod = result.module;
@@ -23,6 +23,7 @@ WebAssembly.instantiateStreaming(fetch("erago.wasm"), go.importObject).then((res
 async function runGoApp() {
     //console.clear();
     await go.run(inst);
+    go = new Go(); // reset instance
     inst = await WebAssembly.instantiate(mod, go.importObject); // reset instance
 }
 

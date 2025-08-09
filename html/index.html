@@ -95,6 +95,7 @@
             engineWorker.postMessage(["install_package", new Uint8Array(bytes), "eragoPkg-tmp"]);
         }
 
+        var engineRunning = false;
         const textDecoder = new TextDecoder('utf-8'); // Specify the encoding
         engineWorker.onmessage = (ev) => {
             console.log("onmessage", ev.data, ev.timestamp)
@@ -116,19 +117,27 @@
             if (ev.data[0] == "engineStatus") {
                 const args = ev.data[1];
                 if (args[0] == "appEngineInitOK") {
+                    engineRunning = true;
                     engineWorker.postMessage(["set_viewsize", 50, 50]);
                     engineWorker.postMessage(["set_textunit_px", 10, 10]);
                     engineWorker.postMessage(["string_width", "1234567890"]);
                     engineWorker.postMessage(["not-implemented-method-demo"]);
                     engineWorker.postMessage(["start_engine"]);
-                    setTimeout(() => engineWorker.postMessage(["send_quit"]), 5 * 1000); // to quit automatically
+                    setTimeout(() => {
+                        if (engineRunning) {
+                            engineWorker.postMessage(["send_quit"])
+                        } else {
+                            console.log("already terminated. skip sending quit");
+                        }
+                    }, 5 * 1000); // to quit automatically
+                }
+                if (args[0] == "appShutdown") {
+                    engineRunning = false;
+                    setTimeout(() => engineWorker.postMessage(["run_engine_worker"]), 5 * 1000); // to restart application.
                 }
             }
             if (ev.data[0] == "engineEvent") {
                 const args = ev.data[1]
-                if (args[0] == "notifyQuit") {
-                    setTimeout(() => engineWorker.postMessage(["run_engine_worker"]), 3 * 1000); // to restart application.
-                }
                 if (args[0] == "addParagraph") {
                     // NOTE: To show json message in console 
                     let s = textDecoder.decode(args[1]);
