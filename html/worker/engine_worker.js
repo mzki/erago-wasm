@@ -68,7 +68,7 @@ for (const entry of [
             })
         } else {
             self.addEventListener(entry[0], (ev) => {
-                self.postMessage(["engineEvent", [entry[1], ev.detail[0]]], transferrables)
+                self.postMessage(["engineEvent", [entry[1], ev.detail[0]]])
             })
         }
     } else {
